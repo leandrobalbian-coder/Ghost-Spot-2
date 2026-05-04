@@ -1,0 +1,12 @@
+{
+  "total_ghosts": 643,
+  "revenue_lost_mxn": 1287400,
+  "since_date": "2026-02-02",
+  "as_of_date": "2026-05-04",
+  "calculation_breakdown": {
+    "ghosts_count": 643,
+    "lead_to_appointment_rate": 0.30,
+    "appointment_to_contract_rate": 0.10,
+    "average_commission_mxn": 18000
+  }
+}

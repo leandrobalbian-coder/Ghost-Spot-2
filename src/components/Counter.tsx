@@ -1,0 +1,43 @@
+"use client";
+
+import { animate, useMotionValue } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+
+type Props = {
+  to: number;
+  duration?: number;
+  delay?: number;
+  format?: (n: number) => string;
+  className?: string;
+};
+
+export function Counter({
+  to,
+  duration = 2.6,
+  delay = 0.2,
+  format = (n) => Math.round(n).toLocaleString("es-MX"),
+  className,
+}: Props) {
+  const value = useMotionValue(0);
+  const [display, setDisplay] = useState(format(0));
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const unsubscribe = value.on("change", (v) => setDisplay(format(v)));
+    const controls = animate(value, to, {
+      duration,
+      delay,
+      ease: [0.16, 1, 0.3, 1],
+    });
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [to, duration, delay, format, value]);
+
+  return (
+    <span ref={ref} className={`tabular-nums font-mono ${className ?? ""}`}>
+      {display}
+    </span>
+  );
+}

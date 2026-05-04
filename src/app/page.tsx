@@ -1,101 +1,108 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { ArrowRight, TrendingDown } from "lucide-react";
+import { Counter } from "@/components/Counter";
+import { metrics } from "@/lib/data";
+import { formatDateLong } from "@/lib/format";
+
+export default function HomePage() {
+  const {
+    revenue_lost_mxn,
+    total_ghosts,
+    since_date,
+    as_of_date,
+    calculation_breakdown: breakdown,
+  } = metrics;
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden">
+      {/* Background grid */}
+      <div className="pointer-events-none absolute inset-0 grid-noise opacity-40" />
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-loss/10 blur-3xl" />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      <section className="relative mx-auto flex max-w-5xl flex-col items-center justify-center px-4 pb-28 pt-16 md:px-6 md:pt-24">
+        {/* Severity badge */}
+        <div className="animate-fade-in mb-8 inline-flex items-center gap-2 rounded-full border border-loss/30 bg-loss/10 px-3 py-1.5 text-xs font-medium uppercase tracking-widest text-loss">
+          <TrendingDown className="h-3 w-3" strokeWidth={2.5} />
+          <span>Pérdida operativa · feb&ndash;abr 2026</span>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* Eyebrow */}
+        <p className="text-balance mb-4 max-w-xl text-center text-sm font-medium text-ink-muted md:text-base">
+          Comisión potencial perdida en leads SS del chatbot
+        </p>
+
+        {/* Hero counter */}
+        <h1 className="text-balance mb-1 text-center font-mono text-[14vw] font-semibold leading-none tracking-tighter text-loss md:text-[140px]">
+          <span aria-hidden className="text-loss/40">$</span>
+          <Counter to={revenue_lost_mxn} />
+          <span className="ml-2 align-middle text-2xl font-medium text-ink-muted md:text-3xl">
+            MXN
+          </span>
+        </h1>
+
+        {/* Time anchor */}
+        <p className="mb-12 mt-6 max-w-2xl text-balance text-center text-base text-ink-muted md:text-lg">
+          <Counter to={total_ghosts} format={(n) => Math.round(n).toLocaleString("es-MX")} className="text-ink" />{" "}
+          conversaciones reales que entraron, mostraron intención, y nunca llegaron a un broker.
+        </p>
+
+        {/* CTA */}
+        <Link
+          href="/feed"
+          className="group inline-flex items-center gap-2 rounded-md bg-loss px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-loss-deep hover:shadow-[0_0_60px_-8px_rgba(239,68,68,0.5)]"
         >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          Ver los fantasmas
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
+        </Link>
+
+        {/* Breakdown stats row */}
+        <div className="mt-20 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle md:grid-cols-4">
+          <Stat label="Ghosts totales" value={total_ghosts.toLocaleString("es-MX")} />
+          <Stat label="Lead → cita" value={`${(breakdown.lead_to_appointment_rate * 100).toFixed(0)}%`} />
+          <Stat label="Cita → contrato" value={`${(breakdown.appointment_to_contract_rate * 100).toFixed(0)}%`} />
+          <Stat
+            label="Comisión prom."
+            value={`$${(breakdown.average_commission_mxn / 1000).toFixed(0)}K`}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        {/* Formula footer */}
+        <p className="mt-10 max-w-3xl text-balance text-center text-xs text-ink-faint">
+          <span className="tabular-nums font-mono">{total_ghosts}</span> ghosts ×{" "}
+          <span className="tabular-nums font-mono">
+            {(breakdown.lead_to_appointment_rate * 100).toFixed(0)}%
+          </span>{" "}
+          lead→cita ×{" "}
+          <span className="tabular-nums font-mono">
+            {(breakdown.appointment_to_contract_rate * 100).toFixed(0)}%
+          </span>{" "}
+          cita→contrato ×{" "}
+          <span className="tabular-nums font-mono">${breakdown.average_commission_mxn.toLocaleString("es-MX")}</span>{" "}
+          MXN comisión.
+          <br className="hidden md:block" />
+          Datos del análisis cruzado{" "}
+          <span className="text-ink-dim">{formatDateLong(since_date)}</span>{" "}
+          al <span className="text-ink-dim">{formatDateLong(as_of_date)}</span>.
+        </p>
+
+        {/* Bottom indicator */}
+        <div className="mt-16 hidden items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-faint md:flex">
+          <span className="h-px w-12 bg-line" />
+          <span>Prototipo de validación</span>
+          <span className="h-px w-12 bg-line" />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 bg-bg-card px-4 py-4 md:px-6 md:py-5">
+      <span className="text-[10px] uppercase tracking-widest text-ink-faint">{label}</span>
+      <span className="tabular-nums font-mono text-2xl font-semibold text-ink md:text-3xl">{value}</span>
     </div>
   );
 }
