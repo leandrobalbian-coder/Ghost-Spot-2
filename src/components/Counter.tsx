@@ -1,7 +1,7 @@
 "use client";
 
 import { animate, useMotionValue } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   to: number;
@@ -19,16 +19,25 @@ export function Counter({
   className,
 }: Props) {
   const value = useMotionValue(0);
-  // Pre-hydration & first paint: render the FINAL value invisibly so the SSR
-  // markup reserves the right width (no layout shift) and we never flash $0.
-  // Once mounted on the client, switch to animated value from 0 → to.
+
+  // Keep `format` out of effect deps — it's a new ref each render when
+  // it comes from a default arg, which would re-trigger the animation
+  // every render and lock the display at 0.
+  const formatRef = useRef(format);
+  formatRef.current = format;
+
+  const finalText = format(to);
+
+  // SSR / pre-hydration: render the FINAL value (invisible via opacity)
+  // so the layout reserves the right width and we never flash $0.
+  // After mount: reset to "0" and animate up to `to`.
   const [mounted, setMounted] = useState(false);
-  const [display, setDisplay] = useState(format(to));
+  const [display, setDisplay] = useState(finalText);
 
   useEffect(() => {
+    setDisplay(formatRef.current(0));
     setMounted(true);
-    setDisplay(format(0));
-    const unsubscribe = value.on("change", (v) => setDisplay(format(v)));
+    const unsub = value.on("change", (v) => setDisplay(formatRef.current(v)));
     const controls = animate(value, to, {
       duration,
       delay,
@@ -36,16 +45,16 @@ export function Counter({
     });
     return () => {
       controls.stop();
-      unsubscribe();
+      unsub();
     };
-  }, [to, duration, delay, format, value]);
+  }, [to, duration, delay, value]);
 
   return (
     <span
       className={`tabular-nums font-mono transition-opacity ${
         mounted ? "opacity-100" : "opacity-0"
       } ${className ?? ""}`}
-      aria-label={format(to)}
+      aria-label={finalText}
     >
       {display}
     </span>
