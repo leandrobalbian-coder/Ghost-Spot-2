@@ -39,6 +39,15 @@ export default function ProfilePage() {
   const allRescued = stats.rescued >= ghosts.length;
 
   const onReset = () => {
+    // Belt-and-suspenders: two-step UI confirm + native window.confirm
+    // since accidental reset during a CEO demo would erase all rescues.
+    const ok =
+      typeof window === "undefined"
+        ? true
+        : window.confirm(
+            "¿Borrar todos tus rescates locales? Esta acción no se puede deshacer."
+          );
+    if (!ok) return;
     resetResolutions();
     setConfirmReset(false);
     toast.show("Demo reseteada", "info");

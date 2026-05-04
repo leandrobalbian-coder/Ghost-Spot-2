@@ -18,8 +18,9 @@ export default async function OG() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background:
-            "radial-gradient(ellipse at top, rgba(239,68,68,0.18), transparent 50%), #0A0A0B",
+          backgroundColor: "#0A0A0B",
+          backgroundImage:
+            "radial-gradient(ellipse at top, rgba(239,68,68,0.18), transparent 50%)",
           padding: "64px",
           color: "#fafafa",
           fontFamily: "system-ui, sans-serif",

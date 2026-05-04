@@ -1,10 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
 import { ArrowRight, TrendingDown } from "lucide-react";
 import { Counter } from "@/components/Counter";
 import { metrics } from "@/lib/data";
 import { formatDateLong } from "@/lib/format";
+import { resetResolutions } from "@/lib/resolutions";
+
+const DEMO_FLAG_KEY = "ghosts_demo_mode";
+
+function DemoModeTrigger() {
+  const search = useSearchParams();
+  useEffect(() => {
+    if (search.get("demo") === "1") {
+      try {
+        resetResolutions();
+        window.sessionStorage.setItem(DEMO_FLAG_KEY, "1");
+        window.dispatchEvent(new Event("ghosts-demo-mode-change"));
+      } catch {}
+    }
+  }, [search]);
+  return null;
+}
 
 export default function HomePage() {
   const {
@@ -17,6 +36,9 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden">
+      <Suspense fallback={null}>
+        <DemoModeTrigger />
+      </Suspense>
       {/* Background grid */}
       <div className="pointer-events-none absolute inset-0 grid-noise opacity-40" />
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full bg-loss/10 blur-3xl" />
@@ -33,8 +55,11 @@ export default function HomePage() {
           Comisión potencial perdida en leads SS del chatbot
         </p>
 
-        {/* Hero counter */}
-        <h1 className="text-balance mb-1 text-center font-mono text-[14vw] font-semibold leading-none tracking-tighter text-loss md:text-[140px]">
+        {/* Hero counter — fluid clamp so it never explodes between sm and md */}
+        <h1
+          className="text-balance mb-1 text-center font-mono font-semibold leading-none tracking-tighter text-loss"
+          style={{ fontSize: "clamp(56px, 12vw, 140px)" }}
+        >
           <span aria-hidden className="text-loss/40">$</span>
           <Counter to={revenue_lost_mxn} />
           <span className="ml-2 align-middle text-2xl font-medium text-ink-muted md:text-3xl">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -18,11 +19,20 @@ type Props = {
 };
 
 export function TimelineChart({ data }: Props) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const enriched = data.map((d) => ({
     ...d,
     label: shortLabel(d.week_start),
     ratio: d.total_convs > 0 ? Math.round((d.ghosts / d.total_convs) * 100) : 0,
   }));
+
+  if (!mounted) {
+    return (
+      <div className="h-[320px] w-full md:h-[420px] shimmer rounded" aria-hidden />
+    );
+  }
 
   // Find x position for the divider (between W5 and W6 = the W6 entry)
   const breakIdx = enriched.findIndex((d) => d.is_post_break);

@@ -99,8 +99,17 @@ export default function FeedPage() {
             <p className="mt-1.5 max-w-xl text-sm text-ink-muted">
               Conversaciones reales que entraron al chatbot, mostraron intención y nunca llegaron a un broker.{" "}
               <span className="text-ink-dim">
-                Mostrando los <span className="tabular-nums font-mono">{visible.length}</span> más recientes de los{" "}
-                <span className="tabular-nums font-mono">643</span> totales.
+                {hasFilters ? (
+                  <>
+                    Mostrando <span className="tabular-nums font-mono">{visible.length}</span> de{" "}
+                    <span className="tabular-nums font-mono">643</span> totales (filtrado).
+                  </>
+                ) : (
+                  <>
+                    Mostrando los <span className="tabular-nums font-mono">{visible.length}</span> más recientes de los{" "}
+                    <span className="tabular-nums font-mono">643</span> totales.
+                  </>
+                )}
               </span>
             </p>
           </div>
@@ -202,7 +211,7 @@ export default function FeedPage() {
         ) : visible.length === 0 ? (
           <EmptyFiltersState onReset={clearFilters} />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <AnimatePresence mode="popLayout">
               {visible.map((g) => (
                 <GhostCard
@@ -304,7 +313,14 @@ function AllDoneState() {
         <button
           type="button"
           onClick={() => {
-            resetResolutions();
+            if (
+              typeof window === "undefined" ||
+              window.confirm(
+                "¿Borrar todos tus rescates locales? Esta acción no se puede deshacer."
+              )
+            ) {
+              resetResolutions();
+            }
           }}
           className="rounded-md bg-loss px-3 py-2 text-xs font-semibold text-white hover:bg-loss-deep"
         >

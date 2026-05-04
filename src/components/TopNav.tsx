@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Ghost, BarChart3, User } from "lucide-react";
+import { Activity, Ghost, BarChart3, User, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getStats, subscribe } from "@/lib/resolutions";
 
@@ -13,14 +13,30 @@ const links = [
   { href: "/profile", label: "Perfil", icon: User },
 ];
 
+const DEMO_FLAG_KEY = "ghosts_demo_mode";
+
 export function TopNav() {
   const pathname = usePathname();
   const [rescued, setRescued] = useState(0);
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     const update = () => setRescued(getStats().rescued);
     update();
     return subscribe(update);
+  }, []);
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        setDemoMode(window.sessionStorage.getItem(DEMO_FLAG_KEY) === "1");
+      } catch {
+        setDemoMode(false);
+      }
+    };
+    read();
+    window.addEventListener("ghosts-demo-mode-change", read);
+    return () => window.removeEventListener("ghosts-demo-mode-change", read);
   }, []);
 
   return (
@@ -59,6 +75,15 @@ export function TopNav() {
         </ul>
 
         <div className="flex items-center gap-3">
+          {demoMode && (
+            <div
+              className="flex items-center gap-1 rounded-full border border-warm/40 bg-warm/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-warm md:px-2.5 md:py-1"
+              title="Modo demo activo: localStorage reseteado al cargar"
+            >
+              <Sparkles className="h-3 w-3" strokeWidth={2.4} />
+              <span>Demo</span>
+            </div>
+          )}
           {rescued > 0 && (
             <div className="hidden items-center gap-1.5 rounded-full border border-ok/30 bg-ok/10 px-2.5 py-1 text-xs font-medium text-ok md:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-ok" />

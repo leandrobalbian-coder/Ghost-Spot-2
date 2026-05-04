@@ -113,9 +113,9 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
                 type="button"
                 onClick={onClose}
                 aria-label="Cerrar"
-                className="flex h-8 w-8 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-bg-hover hover:text-ink"
+                className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-bg-hover hover:text-ink"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" strokeWidth={2.2} />
               </button>
             </div>
 
