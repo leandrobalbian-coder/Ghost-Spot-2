@@ -20,7 +20,6 @@ const VALUE_PER_RESCUE = 540;
 export default function ProfilePage() {
   const [stats, setStats] = useState(() => getStats());
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
-  const [confirmReset, setConfirmReset] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -39,18 +38,15 @@ export default function ProfilePage() {
   const allRescued = stats.rescued >= ghosts.length;
 
   const onReset = () => {
-    // Belt-and-suspenders: two-step UI confirm + native window.confirm
-    // since accidental reset during a CEO demo would erase all rescues.
-    const ok =
-      typeof window === "undefined"
-        ? true
-        : window.confirm(
-            "¿Borrar todos tus rescates locales? Esta acción no se puede deshacer."
-          );
-    if (!ok) return;
-    resetResolutions();
-    setConfirmReset(false);
-    toast.show("Demo reseteada", "info");
+    if (
+      typeof window === "undefined" ||
+      window.confirm(
+        "¿Borrar todos tus rescates locales? Esta acción no se puede deshacer."
+      )
+    ) {
+      resetResolutions();
+      toast.show("Demo reseteada", "info");
+    }
   };
 
   return (
@@ -188,34 +184,14 @@ export default function ProfilePage() {
             Borra todos tus rescates locales para volver a empezar. Útil entre demo y demo, o para Sales testers.
           </p>
         </div>
-        {!confirmReset ? (
-          <button
-            type="button"
-            onClick={() => setConfirmReset(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-3 py-2 text-xs font-medium text-ink-muted hover:text-loss"
-          >
-            <RotateCcw className="h-3 w-3" />
-            Reset demo
-          </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onReset}
-              className="inline-flex items-center gap-1.5 rounded-md bg-loss px-3 py-2 text-xs font-semibold text-white hover:bg-loss-deep"
-            >
-              <RotateCcw className="h-3 w-3" />
-              Confirmar reset
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmReset(false)}
-              className="rounded-md border border-line bg-bg-card px-3 py-2 text-xs text-ink-muted hover:text-ink"
-            >
-              Cancelar
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={onReset}
+          className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg px-3 py-2 text-xs font-medium text-ink-muted hover:text-loss"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Reset demo
+        </button>
       </section>
     </div>
   );
