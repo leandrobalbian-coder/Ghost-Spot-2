@@ -8,12 +8,14 @@ import { useToast } from "@/components/ToastProvider";
 import { ghosts } from "@/lib/data";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import {
+  formatGap,
   getResolutions,
   getStats,
   resetResolutions,
   subscribe,
   type Resolution,
 } from "@/lib/resolutions";
+import { Clock } from "lucide-react";
 
 const VALUE_PER_RESCUE = 540;
 
@@ -88,7 +90,7 @@ export default function ProfilePage() {
       )}
 
       {/* Stats */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
         <BigStat
           label="Rescatados"
           value={stats.rescued}
@@ -101,6 +103,14 @@ export default function ProfilePage() {
           suffix="MXN"
           accent="ok"
           icon={<TrendingDown className="h-4 w-4 rotate-180" />}
+        />
+        <BigStat
+          label="Tiempo / rescate"
+          value={
+            stats.total_resolved >= 2 ? formatGap(stats.avg_gap_seconds) : "—"
+          }
+          accent="muted"
+          icon={<Clock className="h-4 w-4" />}
         />
         <BigStat
           label="Dismissed"
@@ -140,35 +150,40 @@ export default function ProfilePage() {
               return (
                 <li
                   key={r.conv_id}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 ${
-                    i > 0 ? "border-t border-line-subtle" : ""
-                  }`}
+                  className={`px-4 py-3 ${i > 0 ? "border-t border-line-subtle" : ""}`}
                 >
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/feed/${r.conv_id}`}
-                      className="block text-sm font-medium text-ink hover:text-loss"
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/feed/${r.conv_id}`}
+                        className="block text-sm font-medium text-ink hover:text-loss"
+                      >
+                        {ghost.lead_name ?? "Anónimo"}{" "}
+                        {ghost.lead_last_name ? ghost.lead_last_name[0] + "." : ""}
+                      </Link>
+                      <p className="font-mono text-[11px] tabular-nums text-ink-faint">
+                        conv #{r.conv_id} · {formatDateLong(r.resolved_at)}
+                      </p>
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                        r.resolution_type === "rescued"
+                          ? "border-loss/40 bg-loss/10 text-loss"
+                          : "border-line bg-bg-card text-ink-muted"
+                      }`}
                     >
-                      {ghost.lead_name ?? "Anónimo"}{" "}
-                      {ghost.lead_last_name ? ghost.lead_last_name[0] + "." : ""}
-                    </Link>
-                    <p className="font-mono text-[11px] tabular-nums text-ink-faint">
-                      conv #{r.conv_id} · {formatDateLong(r.resolved_at)}
-                    </p>
+                      {r.resolution_type === "rescued"
+                        ? "Rescatado"
+                        : r.resolution_type === "not_actionable"
+                        ? "No accionable"
+                        : "Dismissed"}
+                    </span>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-                      r.resolution_type === "rescued"
-                        ? "border-loss/40 bg-loss/10 text-loss"
-                        : "border-line bg-bg-card text-ink-muted"
-                    }`}
-                  >
-                    {r.resolution_type === "rescued"
-                      ? "Rescatado"
-                      : r.resolution_type === "not_actionable"
-                      ? "No accionable"
-                      : "Dismissed"}
-                  </span>
+                  {r.notes && (
+                    <p className="mt-1.5 rounded border-l-2 border-line bg-bg/40 py-1 pl-2.5 text-xs italic text-ink-muted">
+                      {r.notes}
+                    </p>
+                  )}
                 </li>
               );
             })}

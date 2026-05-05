@@ -66,13 +66,38 @@ export function resetResolutions(): void {
 export function getStats() {
   const resolutions = readStorage();
   const rescued = resolutions.filter((r) => r.resolution_type === "rescued").length;
+
+  // Average gap between consecutive resolutions (in seconds), useful as a
+  // quality-of-work signal for Sales testers — too fast may mean rushed,
+  // too slow may mean stuck. Computed on >= 2 resolutions.
+  const sortedTs = resolutions
+    .map((r) => new Date(r.resolved_at).getTime())
+    .sort((a, b) => a - b);
+  let avg_gap_seconds = 0;
+  if (sortedTs.length >= 2) {
+    const totalMs = sortedTs[sortedTs.length - 1] - sortedTs[0];
+    avg_gap_seconds = Math.round(totalMs / (sortedTs.length - 1) / 1000);
+  }
+
   return {
     total_resolved: resolutions.length,
     rescued,
     dismissed: resolutions.filter((r) => r.resolution_type === "dismissed").length,
     not_actionable: resolutions.filter((r) => r.resolution_type === "not_actionable").length,
     estimated_value_recovered: rescued * VALUE_PER_RESCUE,
+    avg_gap_seconds,
   };
+}
+
+export function formatGap(seconds: number): string {
+  if (!seconds || seconds <= 0) return "—";
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return mm > 0 ? `${h}h ${mm}m` : `${h}h`;
 }
 
 // Pub-sub so feed/profile re-render when resolutions change

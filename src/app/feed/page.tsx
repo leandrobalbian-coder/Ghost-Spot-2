@@ -11,6 +11,7 @@ import { getResolutions, resetResolutions, subscribe } from "@/lib/resolutions";
 import type { Ghost } from "@/types/ghost";
 
 type ScoreFilter = "all" | "high" | "mid" | "low";
+type AgeFilter = "all" | "recent" | "mid" | "old";
 
 const SCORE_CHIPS: { id: ScoreFilter; label: string; range: string }[] = [
   { id: "all", label: "Todos", range: "" },
@@ -19,11 +20,32 @@ const SCORE_CHIPS: { id: ScoreFilter; label: string; range: string }[] = [
   { id: "low", label: "Bajo", range: "<40" },
 ];
 
+const AGE_CHIPS: { id: AgeFilter; label: string; range: string }[] = [
+  { id: "all", label: "Cualquiera", range: "" },
+  { id: "recent", label: "Recientes", range: "≤14d" },
+  { id: "mid", label: "Medios", range: "14-30d" },
+  { id: "old", label: "Viejos", range: ">30d" },
+];
+
+function matchesAge(days: number, filter: AgeFilter): boolean {
+  switch (filter) {
+    case "recent":
+      return days <= 14;
+    case "mid":
+      return days > 14 && days <= 30;
+    case "old":
+      return days > 30;
+    default:
+      return true;
+  }
+}
+
 export default function FeedPage() {
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
   const [sectors, setSectors] = useState<Set<string>>(new Set());
   const [states, setStates] = useState<Set<string>>(new Set());
   const [scoreFilter, setScoreFilter] = useState<ScoreFilter>("all");
+  const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
   const [query, setQuery] = useState("");
   const [activeGhost, setActiveGhost] = useState<Ghost | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -52,6 +74,7 @@ export default function FeedPage() {
         if (scoreFilter === "mid") return g.intent_score >= 40 && g.intent_score < 70;
         return g.intent_score < 40;
       })
+      .filter((g) => matchesAge(g.days_since, ageFilter))
       .filter((g) => {
         if (!query.trim()) return true;
         const q = query.trim().toLowerCase();
@@ -66,12 +89,16 @@ export default function FeedPage() {
           .some((s) => s!.toLowerCase().includes(q));
       })
       .sort((a, b) => b.intent_score - a.intent_score);
-  }, [resolvedIds, sectors, states, scoreFilter, query]);
+  }, [resolvedIds, sectors, states, scoreFilter, ageFilter, query]);
 
   const totalActive = ghosts.filter((g) => !resolvedIds.has(g.conv_id)).length;
   const allDone = totalActive === 0;
   const hasFilters =
-    sectors.size > 0 || states.size > 0 || scoreFilter !== "all" || query.length > 0;
+    sectors.size > 0 ||
+    states.size > 0 ||
+    scoreFilter !== "all" ||
+    ageFilter !== "all" ||
+    query.length > 0;
 
   const toggle = (set: Set<string>, value: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
@@ -84,6 +111,7 @@ export default function FeedPage() {
     setSectors(new Set());
     setStates(new Set());
     setScoreFilter("all");
+    setAgeFilter("all");
     setQuery("");
   };
 
@@ -169,9 +197,9 @@ export default function FeedPage() {
             >
               <Filter className="h-3 w-3" />
               Filtros
-              {(sectors.size > 0 || states.size > 0) && (
+              {(sectors.size > 0 || states.size > 0 || ageFilter !== "all") && (
                 <span className="ml-0.5 rounded bg-loss/20 px-1 font-mono tabular-nums text-loss">
-                  {sectors.size + states.size}
+                  {sectors.size + states.size + (ageFilter !== "all" ? 1 : 0)}
                 </span>
               )}
             </button>
@@ -201,6 +229,36 @@ export default function FeedPage() {
                 selected={states}
                 onToggle={(v) => toggle(states, v, setStates)}
               />
+              {/* Age chip group — useful for Sales triaging by recency */}
+              <div className="md:col-span-2">
+                <p className="mb-2 text-[10px] uppercase tracking-widest text-ink-faint">
+                  Antigüedad de la conversación
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {AGE_CHIPS.map((c) => {
+                    const active = ageFilter === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setAgeFilter(c.id)}
+                        className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                          active
+                            ? "border-loss/50 bg-loss/15 text-loss"
+                            : "border-line bg-bg text-ink-muted hover:text-ink"
+                        }`}
+                      >
+                        {c.label}
+                        {c.range && (
+                          <span className="ml-1 font-mono text-[10px] tabular-nums opacity-70">
+                            {c.range}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

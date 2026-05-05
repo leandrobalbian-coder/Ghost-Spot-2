@@ -34,6 +34,7 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [testerMode, setTesterMode] = useState(false);
+  const [note, setNote] = useState("");
   const toast = useToast();
 
   useEffect(() => {
@@ -64,6 +65,7 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
     if (!open) {
       setCopied(false);
       setConfirming(false);
+      setNote("");
     }
   }, [open]);
 
@@ -84,11 +86,13 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
 
   const handleConfirm = () => {
     setConfirming(true);
+    const trimmed = note.trim();
     saveResolution({
       conv_id: ghost.conv_id,
       resolution_type: "rescued",
       resolved_at: new Date().toISOString(),
       message_copied: copied,
+      ...(trimmed ? { notes: trimmed } : {}),
     });
     toast.show(`${ghost.lead_name ?? "Lead"} marcado como rescatado`, "success");
     setTimeout(() => {
@@ -218,6 +222,28 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
                   <span className="font-medium text-warm">Tester:</span> copiá el mensaje y pegalo en tu WhatsApp para hacer un rescate real. Después confirmá acá para registrarlo.
                 </p>
               )}
+
+              {/* Optional note — useful for Sales follow-up tracking ("le mandé
+                  WhatsApp a las 10am, no respondió"). Persisted in Resolution.notes. */}
+              <div>
+                <label
+                  htmlFor="rescue-note"
+                  className="mb-1.5 flex items-center justify-between text-[11px] uppercase tracking-widest text-ink-faint"
+                >
+                  <span>Nota interna (opcional)</span>
+                  <span className="font-mono tabular-nums normal-case text-ink-faint">
+                    {note.length}/200
+                  </span>
+                </label>
+                <textarea
+                  id="rescue-note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value.slice(0, 200))}
+                  placeholder="Ej: le mandé WhatsApp a las 10am, esperando respuesta…"
+                  rows={2}
+                  className="w-full resize-none rounded-md border border-line bg-bg px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:border-loss/50 focus:outline-none"
+                />
+              </div>
             </div>
 
             {/* Footer actions */}
