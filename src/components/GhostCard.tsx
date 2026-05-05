@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronRight, Clock, MapPin, MessageCircle, MoreHorizontal, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, MapPin, MessageCircle, Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { Ghost } from "@/types/ghost";
 import { ScoreBadge } from "@/components/ScoreBadge";
-import { maskPhone, scoreTier, shortName, truncate } from "@/lib/format";
+import { hasUrgencySignal, maskPhone, scoreTier, shortName, truncate } from "@/lib/format";
 import { saveResolution, type ResolutionType } from "@/lib/resolutions";
 import { useToast } from "@/components/ToastProvider";
 
 type Props = {
   ghost: Ghost;
+  index?: number;
   onRescue: (ghost: Ghost) => void;
   onResolved?: (ghost: Ghost) => void;
 };
@@ -22,7 +23,7 @@ const TIER_ACCENT = {
   low: "border-l-line",
 };
 
-export function GhostCard({ ghost, onRescue, onResolved }: Props) {
+export function GhostCard({ ghost, index = 0, onRescue, onResolved }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const tier = scoreTier(ghost.intent_score);
   const toast = useToast();
@@ -45,7 +46,13 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.32 } }}
-      transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+      transition={{
+        duration: 0.32,
+        ease: [0.16, 1, 0.3, 1],
+        // Staggered entrance — cap the delay so position 20+ doesn't wait
+        // a full second; keeps the "data flowing in" feel without dragging.
+        delay: Math.min(index * 0.05, 0.6),
+      }}
       className={`group relative flex flex-col overflow-hidden rounded-lg border border-line bg-bg-card border-l-2 transition-colors hover:border-line-strong hover:bg-bg-hover ${TIER_ACCENT[tier]}`}
     >
       <Link
@@ -66,9 +73,20 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
           <ScoreBadge score={ghost.intent_score} size="sm" />
         </div>
 
-        {/* Sector + location */}
-        {(ghost.spot_sector || ghost.profile_state) && (
+        {/* Sector + location + urgency signal */}
+        {(ghost.spot_sector ||
+          ghost.profile_state ||
+          hasUrgencySignal(ghost.last_user_message)) && (
           <div className="flex flex-wrap items-center gap-1.5">
+            {hasUrgencySignal(ghost.last_user_message) && (
+              <span
+                className="inline-flex items-center gap-1 rounded border border-loss/40 bg-loss/10 px-1.5 py-0.5 text-[11px] font-medium text-loss"
+                title="El último mensaje contiene señales de urgencia"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-loss animate-pulse-loss" />
+                Alta urgencia
+              </span>
+            )}
             {ghost.spot_sector && (
               <span className="inline-flex items-center rounded border border-line-subtle bg-bg/40 px-1.5 py-0.5 text-[11px] text-ink-muted">
                 {ghost.spot_sector}
@@ -115,7 +133,8 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
         </div>
       </Link>
 
-      {/* Action bar */}
+      {/* Action bar — primary "Rescatar" + explicit "Dismiss" with dropdown.
+          Replaces the previous nearly-invisible (•••) icon menu. */}
       <div className="flex border-t border-line-subtle bg-bg/40">
         <button
           type="button"
@@ -138,10 +157,16 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
               e.stopPropagation();
               setMenuOpen((v) => !v);
             }}
-            aria-label="Más opciones"
-            className="flex h-full items-center justify-center px-3 text-ink-muted transition-colors hover:bg-bg-hover hover:text-ink"
+            aria-label="Marcar como dismissed"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex h-full items-center justify-center gap-1 px-3 text-xs font-medium text-ink-muted transition-colors hover:bg-bg-hover hover:text-ink"
           >
-            <MoreHorizontal className="h-4 w-4" />
+            Dismiss
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${menuOpen ? "rotate-180" : ""}`}
+              strokeWidth={2.4}
+            />
           </button>
           {menuOpen && (
             <>
@@ -153,7 +178,10 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
                   setMenuOpen(false);
                 }}
               />
-              <div className="absolute bottom-full right-0 z-20 mb-1 w-48 overflow-hidden rounded-md border border-line bg-bg-card shadow-modal">
+              <div
+                role="menu"
+                className="absolute bottom-full right-0 z-20 mb-1 w-48 overflow-hidden rounded-md border border-line bg-bg-card shadow-modal"
+              >
                 {[
                   { label: "No es accionable", type: "not_actionable" as const, msg: "Marcado como no accionable" },
                   { label: "Ya contactado", type: "dismissed" as const, msg: "Marcado como ya contactado" },
@@ -161,6 +189,7 @@ export function GhostCard({ ghost, onRescue, onResolved }: Props) {
                 ].map((opt, i) => (
                   <button
                     key={i}
+                    role="menuitem"
                     type="button"
                     onClick={(e) => {
                       e.preventDefault();

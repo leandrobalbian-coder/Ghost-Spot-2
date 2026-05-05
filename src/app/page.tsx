@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { ArrowRight, TrendingDown } from "lucide-react";
 import { Counter } from "@/components/Counter";
 import { metrics } from "@/lib/data";
-import { formatDateLong } from "@/lib/format";
+import { formatDateLong, formatNumber } from "@/lib/format";
 import { resetResolutions } from "@/lib/resolutions";
 
 const DEMO_FLAG_KEY = "ghosts_demo_mode";
@@ -25,6 +25,11 @@ function DemoModeTrigger() {
   return null;
 }
 
+function daysBetween(fromIso: string, toIso: string): number {
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime();
+  return Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)));
+}
+
 export default function HomePage() {
   const {
     revenue_lost_mxn,
@@ -33,6 +38,17 @@ export default function HomePage() {
     as_of_date,
     calculation_breakdown: breakdown,
   } = metrics;
+
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+
+  const daysOfBleed = daysBetween(since_date, as_of_date);
+  const dailyLoss = Math.round(revenue_lost_mxn / daysOfBleed);
+  const potentialAppointments = Math.round(
+    total_ghosts * breakdown.lead_to_appointment_rate
+  );
+  const lostContracts = Math.round(
+    potentialAppointments * breakdown.appointment_to_contract_rate
+  );
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] overflow-hidden">
@@ -55,21 +71,78 @@ export default function HomePage() {
           Comisión potencial perdida en leads SS del chatbot
         </p>
 
-        {/* Hero counter — fluid clamp so it never explodes between sm and md */}
-        <h1
-          className="text-balance mb-1 text-center font-mono font-semibold leading-none tracking-tighter text-loss"
-          style={{ fontSize: "clamp(56px, 12vw, 140px)" }}
+        {/* Hero counter — fluid clamp so it never explodes between sm and md.
+            Hover/focus shows a premium tooltip with the formula breakdown. */}
+        <div
+          className="group relative"
+          onMouseEnter={() => setBreakdownOpen(true)}
+          onMouseLeave={() => setBreakdownOpen(false)}
         >
-          <span aria-hidden className="text-loss/40">$</span>
-          <Counter to={revenue_lost_mxn} />
-          <span className="ml-2 align-middle text-2xl font-medium text-ink-muted md:text-3xl">
-            MXN
-          </span>
-        </h1>
+          <h1
+            className="text-balance mb-1 cursor-help text-center font-mono font-semibold leading-none tracking-tighter text-loss"
+            style={{ fontSize: "clamp(56px, 12vw, 140px)" }}
+            tabIndex={0}
+            onFocus={() => setBreakdownOpen(true)}
+            onBlur={() => setBreakdownOpen(false)}
+            aria-describedby="loss-breakdown"
+          >
+            <span aria-hidden className="text-loss/40">$</span>
+            <Counter to={revenue_lost_mxn} />
+            <span className="ml-2 align-middle text-2xl font-medium text-ink-muted md:text-3xl">
+              MXN
+            </span>
+          </h1>
 
-        {/* Time anchor */}
+          {/* Breakdown tooltip */}
+          <div
+            id="loss-breakdown"
+            role="tooltip"
+            className={`pointer-events-none absolute left-1/2 top-full z-30 mt-3 w-[min(360px,calc(100vw-32px))] -translate-x-1/2 rounded-lg border border-line bg-bg-elevated p-4 text-left shadow-modal transition-all duration-200 ${
+              breakdownOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"
+            }`}
+          >
+            <p className="mb-2 text-[10px] uppercase tracking-widest text-ink-faint">
+              Cómo se compone
+            </p>
+            <ul className="space-y-1.5 font-mono text-xs tabular-nums text-ink-muted">
+              <li className="flex items-center justify-between gap-3">
+                <span>{formatNumber(total_ghosts)} ghosts × 30%</span>
+                <span className="text-ink">= {formatNumber(potentialAppointments)} citas potenciales</span>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span>{formatNumber(potentialAppointments)} citas × 10%</span>
+                <span className="text-ink">= {lostContracts} contratos perdidos</span>
+              </li>
+              <li className="flex items-center justify-between gap-3 border-t border-line-subtle pt-1.5">
+                <span>{lostContracts} × ${formatNumber(breakdown.average_commission_mxn)}</span>
+                <span className="font-semibold text-loss">
+                  = ${formatNumber(revenue_lost_mxn)} MXN
+                </span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Daily bleed indicator — converts the static number into an
+            ongoing hemorrhage that the audience can't ignore */}
+        <p className="mb-2 mt-3 inline-flex items-center gap-1.5 text-xs text-ink-muted">
+          <span className="h-1 w-1 animate-pulse-loss rounded-full bg-loss" />
+          <span>
+            Cada día que pasa, perdemos{" "}
+            <span className="font-mono tabular-nums font-semibold text-loss">
+              ${formatNumber(dailyLoss)} MXN
+            </span>{" "}
+            más
+          </span>
+        </p>
+
+        {/* Time anchor — 643 is static (do NOT animate) so the demo
+            audience never reads "0 conversaciones" while the hero counter
+            animates. The hero $-counter is the only animated number. */}
         <p className="mb-12 mt-6 max-w-2xl text-balance text-center text-base text-ink-muted md:text-lg">
-          <Counter to={total_ghosts} format={(n) => Math.round(n).toLocaleString("es-MX")} className="text-ink" />{" "}
+          <span className="tabular-nums font-mono text-ink">
+            {total_ghosts.toLocaleString("es-MX")}
+          </span>{" "}
           conversaciones reales que entraron, mostraron intención, y nunca llegaron a un broker.
         </p>
 

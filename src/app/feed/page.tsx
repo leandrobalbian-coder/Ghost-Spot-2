@@ -213,10 +213,11 @@ export default function FeedPage() {
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <AnimatePresence mode="popLayout">
-              {visible.map((g) => (
+              {visible.map((g, i) => (
                 <GhostCard
                   key={g.conv_id}
                   ghost={g}
+                  index={i}
                   onRescue={(g) => setActiveGhost(g)}
                 />
               ))}

@@ -5,6 +5,20 @@ import { Check, Copy, MessageCircle, Phone, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Ghost } from "@/types/ghost";
 import { buildRescueMessage, formatPhoneFull, fullName } from "@/lib/format";
+
+function leadSummary(ghost: Ghost): string {
+  const parts: string[] = [];
+  parts.push(ghost.lead_name ? `Buscó` : `Buscaba`);
+  if (ghost.spot_sector) {
+    parts.push(ghost.spot_sector.toLowerCase());
+  } else {
+    parts.push("un espacio");
+  }
+  if (ghost.profile_size) parts.push(`de ${ghost.profile_size}`);
+  if (ghost.profile_budget) parts.push(`(${ghost.profile_budget})`);
+  parts.push(`hace ${ghost.days_since} días`);
+  return parts.join(" ") + ".";
+}
 import { saveResolution } from "@/lib/resolutions";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useToast } from "@/components/ToastProvider";
@@ -19,7 +33,19 @@ type Props = {
 export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [testerMode, setTesterMode] = useState(false);
   const toast = useToast();
+
+  useEffect(() => {
+    // Read tester flag at modal open time (no Suspense needed).
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      setTesterMode(params.get("tester") === "1");
+    } catch {
+      setTesterMode(false);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,6 +147,50 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
 
             {/* Body */}
             <div className="space-y-4 p-5">
+              {/* Lead context — gives Sales the why-this-lead at a glance */}
+              <div className="rounded-md border border-line-subtle bg-bg/60 p-3.5 text-xs leading-relaxed">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-ink-muted">
+                  {ghost.spot_sector && <span>{ghost.spot_sector}</span>}
+                  {ghost.spot_sector && ghost.profile_state && (
+                    <span className="text-ink-faint">·</span>
+                  )}
+                  {ghost.profile_state && <span>{ghost.profile_state}</span>}
+                </div>
+                <p className="mt-1 text-ink">
+                  {leadSummary(ghost)}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tabular-nums text-ink-dim">
+                  <span>
+                    Score{" "}
+                    <span
+                      className={
+                        ghost.intent_score >= 70
+                          ? "font-semibold text-loss"
+                          : ghost.intent_score >= 40
+                          ? "font-semibold text-warm"
+                          : "text-ink-muted"
+                      }
+                    >
+                      {ghost.intent_score}
+                    </span>
+                  </span>
+                  <span className="text-ink-faint">·</span>
+                  <span>{ghost.messages_count} mensajes</span>
+                  {ghost.spot2_links_count > 0 && (
+                    <>
+                      <span className="text-ink-faint">·</span>
+                      <span>{ghost.spot2_links_count} spots vistos</span>
+                    </>
+                  )}
+                </div>
+                {ghost.last_user_message && (
+                  <p className="mt-2 line-clamp-2 border-t border-line-subtle pt-2 text-ink-muted">
+                    <span className="text-ink-faint">Última señal: </span>
+                    <span className="italic">&ldquo;{ghost.last_user_message}&rdquo;</span>
+                  </p>
+                )}
+              </div>
+
               <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-ink-faint">
                 <MessageCircle className="h-3 w-3" />
                 Mensaje pre-llenado
@@ -141,10 +211,13 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
                 </div>
               </div>
 
-              {/* Note */}
-              <p className="rounded-md border border-line-subtle bg-bg/60 px-3 py-2 text-xs text-ink-dim">
-                <span className="text-ink-muted">Demo controlado:</span> el mensaje no se manda automáticamente. Copialo y enviarlo desde tu WhatsApp si querés probar real.
-              </p>
+              {/* Tester instructions — only shown in ?tester=1 mode for Sales testing.
+                  In default (CEO demo) mode, the modal looks like production. */}
+              {testerMode && (
+                <p className="rounded-md border border-warm/30 bg-warm/5 px-3 py-2 text-xs text-ink-muted">
+                  <span className="font-medium text-warm">Tester:</span> copiá el mensaje y pegalo en tu WhatsApp para hacer un rescate real. Después confirmá acá para registrarlo.
+                </p>
+              )}
             </div>
 
             {/* Footer actions */}

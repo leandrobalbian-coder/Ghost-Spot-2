@@ -1,4 +1,4 @@
-import { TrendingDown } from "lucide-react";
+import { Sparkles, TrendingDown } from "lucide-react";
 import { TimelineChart } from "@/components/TimelineChart";
 import { metrics, timeline } from "@/lib/data";
 import { formatDateLong, formatNumber } from "@/lib/format";
@@ -24,7 +24,6 @@ export default function TimelinePage() {
 
   const preWeekly = Math.round(preTotal / pre.length);
   const postWeekly = Math.round(postTotal / post.length);
-  const multiplier = preWeekly > 0 ? postWeekly / preWeekly : 0;
 
   const COMMISSION = metrics.calculation_breakdown.average_commission_mxn;
   const RATE_PRODUCT =
@@ -84,7 +83,25 @@ export default function TimelinePage() {
           ratio={postAvgRatio}
           lost={postLost}
         />
-        <DiffCard multiplier={multiplier} preWeekly={preWeekly} postWeekly={postWeekly} />
+        <DiffCard preRatio={preAvgRatio} postRatio={postAvgRatio} />
+      </div>
+
+      {/* Narrative closer — ties the timeline back to the product pitch */}
+      <div className="mt-6 flex flex-col gap-3 overflow-hidden rounded-lg border border-loss/40 bg-loss/5 p-5 md:flex-row md:items-start md:gap-4 md:p-6">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-loss/15 text-loss">
+          <Sparkles className="h-4 w-4" strokeWidth={2.4} />
+        </div>
+        <div className="space-y-2">
+          <p className="text-balance text-base font-semibold text-ink md:text-lg">
+            Si esta herramienta hubiera estado activa el 2 de febrero, habríamos detectado el break en la primera semana.
+          </p>
+          <p className="text-balance text-sm text-ink-muted">
+            Hoy lo descubrimos{" "}
+            <span className="font-mono tabular-nums">3 meses</span> tarde. Cada semana sin un sistema de
+            detección de fantasmas son ~<span className="font-mono tabular-nums">{Math.round(postWeekly)}</span>{" "}
+            leads que no llegan a un broker.
+          </p>
+        </div>
       </div>
 
       {/* Footnote */}
@@ -148,31 +165,34 @@ function PeriodCard({
   );
 }
 
-function DiffCard({
-  multiplier,
-  preWeekly,
-  postWeekly,
-}: {
-  multiplier: number;
-  preWeekly: number;
-  postWeekly: number;
-}) {
+function DiffCard({ preRatio, postRatio }: { preRatio: number; postRatio: number }) {
+  // Compose the headline ratios: pre ≈ "1 de cada 2", post ≈ "9 de cada 10"
+  const preDenom = Math.max(2, Math.round(100 / preRatio));
+  const postDenom = Math.max(2, Math.round(100 / postRatio));
   return (
-    <div className="overflow-hidden rounded-lg border border-line-strong bg-bg-elevated p-4 md:p-5">
-      <p className="mb-3 text-[10px] uppercase tracking-widest text-ink-faint">Diferencial</p>
+    <div className="overflow-hidden rounded-lg border border-loss/40 bg-loss/5 p-4 md:p-5">
+      <p className="mb-3 text-[10px] uppercase tracking-widest text-ink-faint">Tasa de pérdida</p>
       <div className="mb-1 flex items-baseline gap-2">
-        <span className="font-mono text-3xl font-semibold tabular-nums text-loss md:text-4xl">
-          +{multiplier.toFixed(1)}x
+        <span className="font-mono text-3xl font-semibold tabular-nums text-ink-muted md:text-4xl">
+          {preRatio}%
         </span>
-        <span className="text-xs text-ink-muted">por semana</span>
+        <span className="text-ink-faint">→</span>
+        <span className="font-mono text-3xl font-semibold tabular-nums text-loss md:text-4xl">
+          {postRatio}%
+        </span>
       </div>
       <div className="font-mono text-[11px] tabular-nums text-ink-dim">
-        {formatNumber(preWeekly)} → {formatNumber(postWeekly)} ghosts/sem
+        de las conversaciones se pierden
       </div>
-      <div className="mt-3 flex items-baseline justify-between border-t border-line-subtle pt-2.5 text-xs">
-        <span className="text-ink-muted">Magnitud</span>
-        <span className="font-mono font-semibold tabular-nums text-warm">+{Math.round((multiplier - 1) * 100)}%</span>
-      </div>
+      <p className="mt-3 border-t border-line-subtle pt-2.5 text-xs leading-relaxed text-ink">
+        El chatbot pasó de perder{" "}
+        <span className="font-mono font-semibold tabular-nums">1 de cada {preDenom}</span> leads a
+        perder casi{" "}
+        <span className="font-mono font-semibold tabular-nums text-loss">
+          {Math.round(postRatio / 10)} de cada 10
+        </span>
+        .
+      </p>
     </div>
   );
 }

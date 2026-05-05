@@ -11,6 +11,17 @@ export function maskPhone(phone: string): string {
   return `+${country} ${area} ••••${last4}`;
 }
 
+export function maskEmail(email: string): string {
+  if (!email) return "";
+  const at = email.indexOf("@");
+  if (at <= 0) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at);
+  const visible = local.slice(0, 1);
+  const masked = "•".repeat(Math.max(3, local.length - 1));
+  return `${visible}${masked}${domain}`;
+}
+
 export function formatPhoneFull(phone: string): string {
   if (!phone) return "";
   const digits = phone.replace(/[^\d]/g, "");
@@ -110,6 +121,14 @@ export function buildRescueMessage(ghost: Ghost): string {
 Veo que ${timeRef} escribiste buscando ${sector}${location}. ¿Sigues en la búsqueda?
 
 Tengo algunas opciones que podrían interesarte. ¿Tienes 2 minutos para platicar?`;
+}
+
+const URGENCY_RE =
+  /\b(urge|urgente|cu[áa]ndo(?:\s+podr[íi]a|\s+puedo)?|esta\s+semana|hoy|ya|firmar|contratar|me\s+urge)\b/i;
+
+export function hasUrgencySignal(text: string | null | undefined): boolean {
+  if (!text) return false;
+  return URGENCY_RE.test(text);
 }
 
 export function truncate(text: string | null | undefined, max = 200): string {

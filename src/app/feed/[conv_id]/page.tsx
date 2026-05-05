@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { EmailField } from "@/components/EmailField";
 import { MessageBubble } from "@/components/MessageBubble";
 import { RescueModal } from "@/components/RescueModal";
 import { ScoreBadge } from "@/components/ScoreBadge";
@@ -133,9 +134,7 @@ export default function GhostDetailPage() {
               {ghost.profile_budget && (
                 <ProfileField label="Presupuesto" value={ghost.profile_budget} />
               )}
-              {ghost.lead_email && (
-                <ProfileField label="Email" value={ghost.lead_email} mono />
-              )}
+              {ghost.lead_email && <EmailField email={ghost.lead_email} />}
             </div>
           )}
         </header>
