@@ -1,14 +1,14 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
-import { Filter, RotateCcw, Search, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { Filter, RotateCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AllDoneCelebration } from "@/components/AllDoneCelebration";
 import { GhostCard } from "@/components/GhostCard";
 import { RescueModal } from "@/components/RescueModal";
 import { useToast } from "@/components/ToastProvider";
 import { ghosts, uniqueSectors, uniqueStates } from "@/lib/data";
-import { getResolutions, resetResolutions, saveResolution, subscribe } from "@/lib/resolutions";
+import { getResolutions, saveResolution, subscribe } from "@/lib/resolutions";
 import type { Ghost } from "@/types/ghost";
 
 type ScoreFilter = "all" | "high" | "mid" | "low";
@@ -439,41 +439,5 @@ function EmptyFiltersState({ onReset }: { onReset: () => void }) {
 }
 
 function AllDoneState() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-ok/30 bg-ok/5 py-20 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-ok/20 text-ok">
-        <Sparkles className="h-6 w-6" strokeWidth={2.4} />
-      </div>
-      <h3 className="text-balance text-lg font-semibold text-ink">
-        Rescataste todos los fantasmas pendientes
-      </h3>
-      <p className="mt-1 max-w-sm text-sm text-ink-muted">
-        El feed quedó limpio. Mirá tu progreso o reseteá la demo desde tu perfil.
-      </p>
-      <div className="mt-5 flex gap-2">
-        <Link
-          href="/profile"
-          className="rounded-md border border-line bg-bg-card px-3 py-2 text-xs font-medium text-ink hover:bg-bg-hover"
-        >
-          Ver mi perfil
-        </Link>
-        <button
-          type="button"
-          onClick={() => {
-            if (
-              typeof window === "undefined" ||
-              window.confirm(
-                "¿Borrar todos tus rescates locales? Esta acción no se puede deshacer."
-              )
-            ) {
-              resetResolutions();
-            }
-          }}
-          className="rounded-md bg-loss px-3 py-2 text-xs font-semibold text-white hover:bg-loss-deep"
-        >
-          Reset demo
-        </button>
-      </div>
-    </div>
-  );
+  return <AllDoneCelebration />;
 }

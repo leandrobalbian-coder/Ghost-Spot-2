@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { ArrowRight, TrendingDown } from "lucide-react";
 import { Counter } from "@/components/Counter";
+import { MobileFeedTeaser } from "@/components/MobileFeedTeaser";
 import { metrics } from "@/lib/data";
 import { formatDateLong, formatNumber } from "@/lib/format";
 import { resetResolutions } from "@/lib/resolutions";
@@ -154,6 +155,10 @@ export default function HomePage() {
           Ver los fantasmas
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
         </Link>
+
+        {/* Mobile-only teaser of the top 3 ghosts — micro-evidence before
+            the user navigates to /feed. Hidden on md+. */}
+        <MobileFeedTeaser />
 
         {/* Breakdown stats row */}
         <div className="mt-20 grid w-full max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-subtle bg-line-subtle md:grid-cols-4">
