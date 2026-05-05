@@ -11,14 +11,50 @@ export type Resolution = {
 };
 
 const STORAGE_KEY = "ghosts_resolutions_v1";
+const TESTER_KEY = "ghosts_active_tester";
 const VALUE_PER_RESCUE = 540; // 30% × 10% × $18K MXN
 
 const memoryFallback: Map<string, Resolution> = new Map();
 
+// Tester scoping — when ?tester=NAME is in URL, all resolutions are
+// stored under a per-tester key so multiple Sales testers can use the
+// same browser without polluting each other's data.
+
+export function getActiveTester(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const v = window.sessionStorage.getItem(TESTER_KEY);
+    return v && v.length > 0 ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setActiveTester(name: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (name && name.length > 0) {
+      window.sessionStorage.setItem(TESTER_KEY, name);
+    } else {
+      window.sessionStorage.removeItem(TESTER_KEY);
+    }
+    window.dispatchEvent(new Event("ghosts-tester-change"));
+    notify();
+  } catch {}
+}
+
+function getStorageKey(): string {
+  const tester = getActiveTester();
+  if (!tester) return STORAGE_KEY;
+  // Slugify to keep the key safe
+  const slug = tester.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 32);
+  return `${STORAGE_KEY}__${slug}`;
+}
+
 function readStorage(): Resolution[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(getStorageKey());
     return raw ? (JSON.parse(raw) as Resolution[]) : [];
   } catch {
     return Array.from(memoryFallback.values());
@@ -28,7 +64,7 @@ function readStorage(): Resolution[] {
 function writeStorage(items: Resolution[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    window.localStorage.setItem(getStorageKey(), JSON.stringify(items));
   } catch {
     memoryFallback.clear();
     items.forEach((r) => memoryFallback.set(r.conv_id, r));
@@ -56,7 +92,7 @@ export function getResolution(conv_id: string): Resolution | undefined {
 export function resetResolutions(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(getStorageKey());
   } catch {
     memoryFallback.clear();
   }
@@ -121,6 +157,7 @@ function notify() {
 
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
-    if (e.key === STORAGE_KEY) notify();
+    if (e.key && e.key.startsWith(STORAGE_KEY)) notify();
   });
+  window.addEventListener("ghosts-tester-change", () => notify());
 }

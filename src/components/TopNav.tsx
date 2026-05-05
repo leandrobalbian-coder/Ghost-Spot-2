@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Ghost, BarChart3, User, Sparkles } from "lucide-react";
+import { Activity, Ghost, BarChart3, User, Sparkles, UserCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getStats, subscribe } from "@/lib/resolutions";
+import { getActiveTester, getStats, subscribe } from "@/lib/resolutions";
 
 const links = [
   { href: "/", label: "Resumen", icon: Activity },
@@ -19,6 +19,7 @@ export function TopNav() {
   const pathname = usePathname();
   const [rescued, setRescued] = useState(0);
   const [demoMode, setDemoMode] = useState(false);
+  const [tester, setTester] = useState<string | null>(null);
 
   useEffect(() => {
     const update = () => setRescued(getStats().rescued);
@@ -37,6 +38,13 @@ export function TopNav() {
     read();
     window.addEventListener("ghosts-demo-mode-change", read);
     return () => window.removeEventListener("ghosts-demo-mode-change", read);
+  }, []);
+
+  useEffect(() => {
+    const read = () => setTester(getActiveTester());
+    read();
+    window.addEventListener("ghosts-tester-change", read);
+    return () => window.removeEventListener("ghosts-tester-change", read);
   }, []);
 
   return (
@@ -74,7 +82,16 @@ export function TopNav() {
           })}
         </ul>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {tester && (
+            <div
+              className="flex items-center gap-1 rounded-full border border-loss/40 bg-loss/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-loss md:px-2.5 md:py-1"
+              title={`Modo tester activo: rescates separados por usuario "${tester}"`}
+            >
+              <UserCircle className="h-3 w-3" strokeWidth={2.4} />
+              <span className="max-w-[80px] truncate normal-case">{tester}</span>
+            </div>
+          )}
           {demoMode && (
             <div
               className="flex items-center gap-1 rounded-full border border-warm/40 bg-warm/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-warm md:px-2.5 md:py-1"

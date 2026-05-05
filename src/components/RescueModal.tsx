@@ -19,7 +19,7 @@ function leadSummary(ghost: Ghost): string {
   parts.push(`hace ${ghost.days_since} días`);
   return parts.join(" ") + ".";
 }
-import { saveResolution } from "@/lib/resolutions";
+import { getActiveTester, saveResolution } from "@/lib/resolutions";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useToast } from "@/components/ToastProvider";
 
@@ -38,14 +38,10 @@ export function RescueModal({ ghost, open, onClose, onConfirmed }: Props) {
   const toast = useToast();
 
   useEffect(() => {
-    // Read tester flag at modal open time (no Suspense needed).
-    if (typeof window === "undefined") return;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      setTesterMode(params.get("tester") === "1");
-    } catch {
-      setTesterMode(false);
-    }
+    // Tester mode is now driven by sessionStorage (set by TesterTrigger
+    // when ?tester=NAME is in the URL). Re-read every time the modal opens
+    // so it stays in sync with the active tester.
+    setTesterMode(getActiveTester() !== null);
   }, [open]);
 
   useEffect(() => {

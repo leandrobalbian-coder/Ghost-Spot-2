@@ -3,11 +3,12 @@
 import { AnimatePresence } from "framer-motion";
 import { Filter, RotateCcw, Search, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GhostCard } from "@/components/GhostCard";
 import { RescueModal } from "@/components/RescueModal";
+import { useToast } from "@/components/ToastProvider";
 import { ghosts, uniqueSectors, uniqueStates } from "@/lib/data";
-import { getResolutions, resetResolutions, subscribe } from "@/lib/resolutions";
+import { getResolutions, resetResolutions, saveResolution, subscribe } from "@/lib/resolutions";
 import type { Ghost } from "@/types/ghost";
 
 type ScoreFilter = "all" | "high" | "mid" | "low";
@@ -47,6 +48,9 @@ export default function FeedPage() {
   const [scoreFilter, setScoreFilter] = useState<ScoreFilter>("all");
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
   const [query, setQuery] = useState("");
+  const [showResolved, setShowResolved] = useState(false);
+  const visibleRef = useRef<Ghost[]>([]);
+  const toast = useToast();
   const [activeGhost, setActiveGhost] = useState<Ghost | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -60,12 +64,53 @@ export default function FeedPage() {
     return subscribe(sync);
   }, []);
 
+  // Keyboard shortcuts (desktop power-users):
+  //   R → rescatar el primer ghost visible (top of the sorted feed)
+  //   D → dismiss el primer ghost visible como "ya contactado"
+  // Disabled when a modal is open or focus is in an input/textarea.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (activeGhost) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const top = visibleRef.current[0];
+      if (!top) return;
+      const k = e.key.toLowerCase();
+      if (k === "r") {
+        e.preventDefault();
+        setActiveGhost(top);
+      } else if (k === "d") {
+        e.preventDefault();
+        saveResolution({
+          conv_id: top.conv_id,
+          resolution_type: "dismissed",
+          resolved_at: new Date().toISOString(),
+          message_copied: false,
+        });
+        toast.show(
+          `${top.lead_name ?? "Lead"} marcado como dismissed (D)`,
+          "info"
+        );
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeGhost, toast]);
+
   const sectorOptions = useMemo(() => uniqueSectors(), []);
   const stateOptions = useMemo(() => uniqueStates(), []);
 
   const visible = useMemo(() => {
     return ghosts
-      .filter((g) => !resolvedIds.has(g.conv_id))
+      .filter((g) => (showResolved ? true : !resolvedIds.has(g.conv_id)))
       .filter((g) => (sectors.size === 0 ? true : g.spot_sector ? sectors.has(g.spot_sector) : false))
       .filter((g) => (states.size === 0 ? true : g.profile_state ? states.has(g.profile_state) : false))
       .filter((g) => {
@@ -89,7 +134,13 @@ export default function FeedPage() {
           .some((s) => s!.toLowerCase().includes(q));
       })
       .sort((a, b) => b.intent_score - a.intent_score);
-  }, [resolvedIds, sectors, states, scoreFilter, ageFilter, query]);
+  }, [resolvedIds, sectors, states, scoreFilter, ageFilter, query, showResolved]);
+
+  // Sync ref so keyboard shortcuts can read the freshest visible[0]
+  // without re-binding the listener on every list change.
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
 
   const totalActive = ghosts.filter((g) => !resolvedIds.has(g.conv_id)).length;
   const allDone = totalActive === 0;
@@ -141,9 +192,26 @@ export default function FeedPage() {
               </span>
             </p>
           </div>
-          <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
-            <span className="inline-flex h-2 w-2 animate-pulse-loss rounded-full bg-loss" />
-            <span>{totalActive} activos</span>
+          <div className="flex items-center gap-3">
+            {resolvedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowResolved((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  showResolved
+                    ? "border-loss/40 bg-loss/10 text-loss"
+                    : "border-line bg-bg-card text-ink-muted hover:text-ink"
+                }`}
+                title="Incluir los ghosts ya rescatados o dismisseados en el feed"
+              >
+                <span className="font-mono tabular-nums">{resolvedIds.size}</span>
+                {showResolved ? "rescatados visibles" : "rescatados ocultos"}
+              </button>
+            )}
+            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-ink-faint">
+              <span className="inline-flex h-2 w-2 animate-pulse-loss rounded-full bg-loss" />
+              <span>{totalActive} activos</span>
+            </div>
           </div>
         </header>
 
@@ -269,18 +337,38 @@ export default function FeedPage() {
         ) : visible.length === 0 ? (
           <EmptyFiltersState onReset={clearFilters} />
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <AnimatePresence mode="popLayout">
-              {visible.map((g, i) => (
-                <GhostCard
-                  key={g.conv_id}
-                  ghost={g}
-                  index={i}
-                  onRescue={(g) => setActiveGhost(g)}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
+          <>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <AnimatePresence mode="popLayout">
+                {visible.map((g, i) => (
+                  <GhostCard
+                    key={g.conv_id}
+                    ghost={g}
+                    index={i}
+                    onRescue={(g) => setActiveGhost(g)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+            {/* Keyboard shortcut hint — desktop only */}
+            <p className="mt-6 hidden items-center justify-center gap-3 text-[10px] uppercase tracking-widest text-ink-faint md:flex">
+              <span className="inline-flex items-center gap-1">
+                <kbd className="rounded border border-line bg-bg-card px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-ink-muted">
+                  R
+                </kbd>
+                <span>rescatar</span>
+              </span>
+              <span className="text-ink-faint">·</span>
+              <span className="inline-flex items-center gap-1">
+                <kbd className="rounded border border-line bg-bg-card px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-ink-muted">
+                  D
+                </kbd>
+                <span>dismiss</span>
+              </span>
+              <span className="text-ink-faint">·</span>
+              <span>el primero visible</span>
+            </p>
+          </>
         )}
       </div>
 

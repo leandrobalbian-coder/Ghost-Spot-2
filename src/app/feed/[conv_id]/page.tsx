@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Building2, CheckCircle2, Clock, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle2, Clock, Link2, MapPin, MessageCircle, Phone, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -10,6 +10,8 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { RescueModal } from "@/components/RescueModal";
 import { ScoreBadge } from "@/components/ScoreBadge";
 import { SpotCard } from "@/components/SpotCard";
+import { useToast } from "@/components/ToastProvider";
+import { copyToClipboard } from "@/lib/clipboard";
 import { findGhost } from "@/lib/data";
 import {
   formatDateLong,
@@ -25,12 +27,34 @@ export default function GhostDetailPage() {
   const ghost = findGhost(params.conv_id);
   const [resolution, setResolution] = useState<Resolution | undefined>(undefined);
   const [open, setOpen] = useState(false);
+  const toast = useToast();
+
+  const handleShare = async () => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/feed/${params.conv_id}?share=1`;
+    const ok = await copyToClipboard(url);
+    toast.show(
+      ok ? "Link de share copiado" : "No se pudo copiar el link",
+      ok ? "success" : "error"
+    );
+  };
 
   useEffect(() => {
     if (!ghost) return;
     const sync = () => setResolution(getResolution(ghost.conv_id));
     sync();
     return subscribe(sync);
+  }, [ghost]);
+
+  // Share link: /feed/[conv_id]?share=1 opens the modal directly so a
+  // shared URL becomes "ready to rescue" in one click.
+  useEffect(() => {
+    if (!ghost) return;
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("share") === "1") setOpen(true);
+    } catch {}
   }, [ghost]);
 
   const conversationMeta = useMemo(() => {
@@ -49,14 +73,25 @@ export default function GhostDetailPage() {
   return (
     <>
       <div className="mx-auto max-w-4xl px-4 pb-32 pt-4 md:px-6 md:pt-8">
-        {/* Back */}
-        <Link
-          href="/feed"
-          className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Volver al feed
-        </Link>
+        {/* Back + share */}
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <Link
+            href="/feed"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Volver al feed
+          </Link>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-bg-card px-2.5 py-1.5 text-[11px] font-medium text-ink-muted transition-colors hover:text-ink"
+            title="Copiar link directo al rescate"
+          >
+            <Link2 className="h-3 w-3" />
+            Share
+          </button>
+        </div>
 
         {/* Resolved banner */}
         {resolution && (

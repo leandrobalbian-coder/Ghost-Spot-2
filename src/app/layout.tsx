@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { Suspense } from "react";
+import { TesterTrigger } from "@/components/TesterTrigger";
 import { TopNav } from "@/components/TopNav";
 import { ToastProvider } from "@/components/ToastProvider";
 
@@ -51,6 +53,9 @@ export default function RootLayout({
         className={`${inter.variable} ${plexMono.variable} font-sans antialiased min-h-screen bg-bg text-ink`}
       >
         <ToastProvider>
+          <Suspense fallback={null}>
+            <TesterTrigger />
+          </Suspense>
           <TopNav />
           <main className="pt-14">{children}</main>
         </ToastProvider>

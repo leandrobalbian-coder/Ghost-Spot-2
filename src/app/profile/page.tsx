@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, RotateCcw, Sparkles, TrendingDown, User as UserIcon } from "lucide-react";
+import { Check, CheckCircle2, RotateCcw, Sparkles, TrendingDown, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ScoreBadge } from "@/components/ScoreBadge";
 import { useToast } from "@/components/ToastProvider";
 import { ghosts } from "@/lib/data";
-import { formatDateLong, formatNumber } from "@/lib/format";
+import { formatDateLong, formatNumber, timeSince } from "@/lib/format";
 import {
   formatGap,
   getResolutions,
@@ -19,9 +20,18 @@ import { Clock } from "lucide-react";
 
 const VALUE_PER_RESCUE = 540;
 
+type ActivityFilter = "all" | "rescued" | "dismissed";
+
+const ACTIVITY_CHIPS: { id: ActivityFilter; label: string }[] = [
+  { id: "all", label: "Todos" },
+  { id: "rescued", label: "Rescatados" },
+  { id: "dismissed", label: "Dismissed" },
+];
+
 export default function ProfilePage() {
   const [stats, setStats] = useState(() => getStats());
   const [resolutions, setResolutions] = useState<Resolution[]>([]);
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("all");
   const toast = useToast();
 
   useEffect(() => {
@@ -38,6 +48,15 @@ export default function ProfilePage() {
   }, []);
 
   const allRescued = stats.rescued >= ghosts.length;
+
+  const filteredResolutions = useMemo(() => {
+    return resolutions.filter((r) => {
+      if (activityFilter === "all") return true;
+      if (activityFilter === "rescued") return r.resolution_type === "rescued";
+      // dismissed bucket lumps "dismissed" + "not_actionable"
+      return r.resolution_type !== "rescued";
+    });
+  }, [resolutions, activityFilter]);
 
   const onReset = () => {
     if (
@@ -129,22 +148,60 @@ export default function ProfilePage() {
 
       {/* Activity log */}
       <section className="mt-10">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-ink-muted">
-          Actividad
-        </h2>
-        {resolutions.length === 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-ink-muted">
+            Actividad
+          </h2>
+          {resolutions.length > 0 && (
+            <div className="flex items-center gap-1">
+              {ACTIVITY_CHIPS.map((c) => {
+                const active = activityFilter === c.id;
+                const count =
+                  c.id === "all"
+                    ? resolutions.length
+                    : c.id === "rescued"
+                    ? stats.rescued
+                    : stats.dismissed + stats.not_actionable;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setActivityFilter(c.id)}
+                    className={`shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-loss/50 bg-loss/15 text-loss"
+                        : "border-line bg-bg text-ink-muted hover:border-line-strong hover:text-ink"
+                    }`}
+                  >
+                    {c.label}
+                    <span className="ml-1 font-mono text-[10px] tabular-nums opacity-70">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {filteredResolutions.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line bg-bg-card/40 p-8 text-center">
-            <p className="text-sm text-ink-muted">Todavía no rescataste ningún fantasma.</p>
-            <Link
-              href="/feed"
-              className="mt-3 inline-block rounded-md bg-loss px-3 py-2 text-xs font-semibold text-white shadow-glow hover:bg-loss-deep"
-            >
-              Ir al feed
-            </Link>
+            <p className="text-sm text-ink-muted">
+              {resolutions.length === 0
+                ? "Todavía no rescataste ningún fantasma."
+                : "Ningún registro matchea este filtro."}
+            </p>
+            {resolutions.length === 0 && (
+              <Link
+                href="/feed"
+                className="mt-3 inline-block rounded-md bg-loss px-3 py-2 text-xs font-semibold text-white shadow-glow hover:bg-loss-deep"
+              >
+                Ir al feed
+              </Link>
+            )}
           </div>
         ) : (
           <ul className="overflow-hidden rounded-lg border border-line bg-bg-card">
-            {resolutions.map((r, i) => {
+            {filteredResolutions.map((r, i) => {
               const ghost = ghosts.find((g) => g.conv_id === r.conv_id);
               if (!ghost) return null;
               return (
@@ -161,27 +218,40 @@ export default function ProfilePage() {
                         {ghost.lead_name ?? "Anónimo"}{" "}
                         {ghost.lead_last_name ? ghost.lead_last_name[0] + "." : ""}
                       </Link>
-                      <p className="font-mono text-[11px] tabular-nums text-ink-faint">
-                        conv #{r.conv_id} · {formatDateLong(r.resolved_at)}
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tabular-nums text-ink-faint">
+                        <span>conv #{r.conv_id}</span>
+                        <span className="text-ink-faint">·</span>
+                        <span>{timeSince(r.resolved_at)}</span>
+                        {r.message_copied && (
+                          <>
+                            <span className="text-ink-faint">·</span>
+                            <span className="inline-flex items-center gap-0.5 text-ok">
+                              <Check className="h-3 w-3" /> mensaje copiado
+                            </span>
+                          </>
+                        )}
                       </p>
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-                        r.resolution_type === "rescued"
-                          ? "border-loss/40 bg-loss/10 text-loss"
-                          : "border-line bg-bg-card text-ink-muted"
-                      }`}
-                    >
-                      {r.resolution_type === "rescued"
-                        ? "Rescatado"
-                        : r.resolution_type === "not_actionable"
-                        ? "No accionable"
-                        : "Dismissed"}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                          r.resolution_type === "rescued"
+                            ? "border-loss/40 bg-loss/10 text-loss"
+                            : "border-line bg-bg-card text-ink-muted"
+                        }`}
+                      >
+                        {r.resolution_type === "rescued"
+                          ? "Rescatado"
+                          : r.resolution_type === "not_actionable"
+                          ? "No accionable"
+                          : "Dismissed"}
+                      </span>
+                      <ScoreBadge score={ghost.intent_score} size="sm" />
+                    </div>
                   </div>
                   {r.notes && (
                     <p className="mt-1.5 rounded border-l-2 border-line bg-bg/40 py-1 pl-2.5 text-xs italic text-ink-muted">
-                      {r.notes}
+                      &ldquo;{r.notes}&rdquo;
                     </p>
                   )}
                 </li>
